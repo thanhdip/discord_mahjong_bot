@@ -53,7 +53,7 @@ class Mahjong(commands.Cog):
         ctx: commands.Context,
         members: commands.Greedy[discord.Member] = None,
         *,
-        force: str = None,
+        force: str = "",
     ) -> None:
         if not self.mahjong_drawer or force.lower() == "force":
             self.mahjong_drawer = MahjongDrawer()
@@ -77,18 +77,19 @@ class Mahjong(commands.Cog):
         self,
         ctx: commands.Context,
         members: commands.Greedy[discord.Member] = None,
-        force: str = None,
+        force: str = "",
     ) -> None:
         if not self.mahjong_drawer:
             await self.winds(ctx)
 
         user = ctx.author.display_name
-        if user in self.mahjong_drawer.DRAWN_USERS and force.lower() != "force":
-            await ctx.send("You've already drawn, {user}. Type it in again with force if you want to draw.")
-            return
-
-        cur_tile = self.mahjong_drawer.reveal_next(user)
-        draw_msg = f"{user} drew: {cur_tile}\n"
+        if user in self.mahjong_drawer.DRAWN_USERS and force.lower() != "force" and members == None:
+            await ctx.send(f"You've already drawn, {user}. Type it in again with force or tag yourself if you want to draw.")
+        elif members == None:
+            cur_tile = self.mahjong_drawer.reveal_next(user)
+            draw_msg = f"{user} drew: {cur_tile}\n"
+        else:
+            draw_msg = ""
 
         if members:
             for member in members[:3]:
