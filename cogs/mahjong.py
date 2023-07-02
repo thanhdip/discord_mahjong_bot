@@ -30,7 +30,7 @@ class MahjongDrawer:
 
     def reveal_next(self, user: str) -> str:
         self.DRAWN_USERS.append(user)
-        if self.num_reveal_tiles >= 4:
+        if self.all_revealed():
             self.new_set()
         self.num_reveal_tiles += 1
         self.reveal_tiles()
@@ -39,6 +39,9 @@ class MahjongDrawer:
     def last_revealed_tile(self) -> str:
         cur_tile = self.num_reveal_tiles - 1
         return self.reveal_winds[cur_tile] if cur_tile >= 0 else self.TILE_BACK
+
+    def all_revealed(self):
+        return self.num_reveal_tiles >= 3
 
 
 class Mahjong(commands.Cog):
@@ -55,7 +58,11 @@ class Mahjong(commands.Cog):
         *,
         force: str = "",
     ) -> None:
-        if not self.mahjong_drawer or force.lower() == "force":
+        if (
+            not self.mahjong_drawer
+            or force.lower() == "force"
+            or self.mahjong_drawer.all_revealed()
+        ):
             self.mahjong_drawer = MahjongDrawer()
 
         draw_msg = ""
@@ -79,22 +86,26 @@ class Mahjong(commands.Cog):
         members: commands.Greedy[discord.Member] = None,
         force: str = "",
     ) -> None:
-        if not self.mahjong_drawer:
+        if not self.mahjong_drawer or self.mahjong_drawer.all_revealed():
             await self.winds(ctx)
 
         user = ctx.author.display_name
-        if user in self.mahjong_drawer.DRAWN_USERS and force.lower() != "force" and members == None:
-            await ctx.send(f"You've already drawn, {user}. Type it in again with force or tag yourself if you want to draw.")
-        elif members == None:
+        if (
+            user in self.mahjong_drawer.DRAWN_USERS
+            and force.lower() != "force"
+            and members == None
+        ):
+            await ctx.send(
+                f"You've already drawn, {user}. Type it in again with force or tag yourself if you want to draw."
+            )
+        elif members != None and user not in self.mahjong_drawer.DRAWN_USERS:
             cur_tile = self.mahjong_drawer.reveal_next(user)
             draw_msg = f"{user} drew: {cur_tile}\n"
-        else:
-            draw_msg = ""
 
         if members:
             for member in members[:3]:
                 cur_tile = self.mahjong_drawer.reveal_next(member.name)
-                draw_msg += f"{member.name} drew: {cur_tile}"
+                draw_msg += f"{member.name} drew: {cur_tile}\n"
 
         drawn_tiles = self.mahjong_drawer.reveal_tiles()
         draw_msg += f"""
