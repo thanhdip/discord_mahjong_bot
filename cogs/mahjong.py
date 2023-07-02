@@ -87,7 +87,7 @@ class Mahjong(commands.Cog):
         force: str = "",
     ) -> None:
         if not self.mahjong_drawer or self.mahjong_drawer.all_revealed():
-            await self.winds(ctx)
+            self.mahjong_drawer = MahjongDrawer()
 
         user = ctx.author.display_name
         if (
