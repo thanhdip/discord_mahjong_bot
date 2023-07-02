@@ -28,7 +28,8 @@ class MahjongDrawer:
         self.wind_set = sample(self.WINDS.keys(), 4)
         self.reveal_winds = [self.WINDS[key] for key in self.wind_set]
 
-    def reveal_next(self) -> str:
+    def reveal_next(self, user: str) -> str:
+        self.DRAWN_USERS.append(user)
         if self.num_reveal_tiles >= 4:
             self.new_set()
         self.num_reveal_tiles += 1
@@ -60,7 +61,7 @@ class Mahjong(commands.Cog):
         draw_msg = ""
         if members:
             for member in members[:4]:
-                cur_tile = self.mahjong_drawer.reveal_next()
+                cur_tile = self.mahjong_drawer.reveal_next(member.name)
                 draw_msg += f"{member.name} drew: {cur_tile}\n"
         draw_msg += "\n"
 
@@ -86,12 +87,12 @@ class Mahjong(commands.Cog):
             await ctx.send("You've already drawn, {user}. Type it in again with force if you want to draw.")
             return
 
-        cur_tile = self.mahjong_drawer.reveal_next()
+        cur_tile = self.mahjong_drawer.reveal_next(user)
         draw_msg = f"{user} drew: {cur_tile}\n"
 
         if members:
             for member in members[:3]:
-                cur_tile = self.mahjong_drawer.reveal_next()
+                cur_tile = self.mahjong_drawer.reveal_next(member.name)
                 draw_msg += f"{member.name} drew: {cur_tile}"
 
         drawn_tiles = self.mahjong_drawer.reveal_tiles()
