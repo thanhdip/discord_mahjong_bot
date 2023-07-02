@@ -14,3 +14,6 @@ class Mahjong(commands.Cog):
     @commands.command(name="test")
     async def tester(self, ctx):
         await ctx.send("HELLO")
+
+async def setup(bot):
+    await bot.add_cog(Mahjong(bot))

@@ -1,7 +1,8 @@
+import os
+import typing
 import discord
 import logging
 import asyncio
-import os
 from os.path import join, dirname
 from dotenv import load_dotenv
 from utility.func import getLogger
@@ -109,6 +110,22 @@ class MahjongBot(commands.Bot):
                 asyncio.run(cancel_tasks_coro)
             finally:
                 logger.info("Closing the event loop.")
+
+    async def on_connect(self):
+
+        # Load all defined cogs
+        for cog in self.loaded_cogs:
+            if cog in self.extensions:
+                continue
+            logger.debug("Loading %s.", cog)
+            try:
+                await self.load_extension(cog)
+                logger.debug("Successfully loaded %s.", cog)
+            except Exception:
+                logger.exception("Failed to load %s.", cog)
+        logger.line("debug")
+
+
 
 def main():
 
