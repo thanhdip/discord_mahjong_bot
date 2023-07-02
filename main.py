@@ -11,14 +11,14 @@ from discord.ext import commands
 from aiohttp import ClientSession
 
 logger = getLogger(__name__)
-dotenv_path = join(dirname(__file__), '.env')
+dotenv_path = join(dirname(__file__), ".env")
 load_dotenv(dotenv_path)
 
+
 class MahjongBot(commands.Bot):
-    
     def __init__(self):
         intents = discord.Intents.all()
-        super().__init__(command_prefix=">", intents=intents)
+        super().__init__(command_prefix="?", intents=intents)
         self.loaded_cogs = ["cogs.mahjong"]
 
         self._connected = None
@@ -73,7 +73,11 @@ class MahjongBot(commands.Bot):
             async with self:
                 task_retriever = asyncio.all_tasks
                 loop = self.loop
-                tasks = {t for t in task_retriever() if not t.done() and t.get_coro() != cancel_tasks_coro}
+                tasks = {
+                    t
+                    for t in task_retriever()
+                    if not t.done() and t.get_coro() != cancel_tasks_coro
+                }
 
                 if not tasks:
                     return
@@ -112,7 +116,6 @@ class MahjongBot(commands.Bot):
                 logger.info("Closing the event loop.")
 
     async def on_connect(self):
-
         # Load all defined cogs
         for cog in self.loaded_cogs:
             if cog in self.extensions:
@@ -126,21 +129,24 @@ class MahjongBot(commands.Bot):
         logger.line("debug")
 
 
-
 def main():
-
     # Set up discord.py internal logging
     if os.environ.get("LOG_DISCORD"):
         logger.debug(f"Discord logging enabled: {os.environ['LOG_DISCORD'].upper()}")
         d_logger = logging.getLogger("discord")
 
         d_logger.setLevel(os.environ["LOG_DISCORD"].upper())
-        handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
-        handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
+        handler = logging.FileHandler(
+            filename="discord.log", encoding="utf-8", mode="w"
+        )
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+        )
         d_logger.addHandler(handler)
 
     bot = MahjongBot()
     bot.run()
+
 
 if __name__ == "__main__":
     main()
