@@ -79,9 +79,7 @@ class MahjongScore:
                 return None
             # Explicit han and fu. Both can be anything and fu will be coerced to correct
             han_fu_dict = dict(zip(explicit, han_fu[:2]))
-            han_fu_dict["fu"] = self.round_up_to_closest_number(
-                han_fu_dict["fu"], self.VALID_FU
-            )
+            han_fu_dict["fu"] = self.round_up_to_closest_number(han_fu_dict["fu"], self.VALID_FU)
             return han_fu_dict
         elif len(han_fu) == 1:
             fu = self.round_up_to_closest_number(0, self.VALID_FU)
@@ -147,11 +145,7 @@ class Mahjong(commands.Cog):
         *,
         force: str = "",
     ) -> None:
-        if (
-            not self.mahjong_drawer
-            or force.lower() == "force"
-            or self.mahjong_drawer.all_revealed()
-        ):
+        if not self.mahjong_drawer or force.lower() == "force" or self.mahjong_drawer.all_revealed():
             self.mahjong_drawer = MahjongDrawer()
 
         draw_msg = ""
@@ -163,7 +157,7 @@ class Mahjong(commands.Cog):
 
         drawn_tiles = self.mahjong_drawer.reveal_tiles()
         msg = f"""{draw_msg}Tiles:
-        
+
         {drawn_tiles}
         """
         await ctx.send(msg)
@@ -179,11 +173,7 @@ class Mahjong(commands.Cog):
             self.mahjong_drawer = MahjongDrawer()
 
         user = ctx.author.display_name
-        if (
-            user in self.mahjong_drawer.DRAWN_USERS
-            and force.lower() != "force"
-            and members == None
-        ):
+        if user in self.mahjong_drawer.DRAWN_USERS and force.lower() != "force" and members == None:
             await ctx.send(
                 f"You've already drawn, {user}. Type it in again with force or tag yourself if you want to draw."
             )
@@ -198,7 +188,7 @@ class Mahjong(commands.Cog):
 
         drawn_tiles = self.mahjong_drawer.reveal_tiles()
         draw_msg += f"""
-        
+
         Tiles:
         {drawn_tiles}
         """

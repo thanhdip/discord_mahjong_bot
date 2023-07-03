@@ -5,6 +5,7 @@ from colorama import Fore, Style
 log_level = logging.INFO
 loggers = set()
 
+
 class CustomLogger(logging.Logger):
     @staticmethod
     def _debug_(*msgs):
@@ -52,6 +53,7 @@ class CustomLogger(logging.Logger):
                 [],
             )
 
+
 logging.setLoggerClass(CustomLogger)
 log_stream_handler = logging.StreamHandler(stream=sys.stdout)
 log_stream_handler.setLevel(log_level)
@@ -59,6 +61,7 @@ formatter = logging.Formatter(
     "%(asctime)s %(name)s[%(lineno)d] - %(levelname)s: %(message)s", datefmt="%m/%d/%y %H:%M:%S"
 )
 log_stream_handler.setFormatter(formatter)
+
 
 def getLogger(name=None) -> CustomLogger:
     logger = logging.getLogger(name)

@@ -1,5 +1,4 @@
 import os
-import typing
 import discord
 import logging
 import asyncio
@@ -73,11 +72,7 @@ class MahjongBot(commands.Bot):
             async with self:
                 task_retriever = asyncio.all_tasks
                 loop = self.loop
-                tasks = {
-                    t
-                    for t in task_retriever()
-                    if not t.done() and t.get_coro() != cancel_tasks_coro
-                }
+                tasks = {t for t in task_retriever() if not t.done() and t.get_coro() != cancel_tasks_coro}
 
                 if not tasks:
                     return
@@ -136,12 +131,8 @@ def main():
         d_logger = logging.getLogger("discord")
 
         d_logger.setLevel(os.environ["LOG_DISCORD"].upper())
-        handler = logging.FileHandler(
-            filename="discord.log", encoding="utf-8", mode="w"
-        )
-        handler.setFormatter(
-            logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-        )
+        handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
+        handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
         d_logger.addHandler(handler)
 
     bot = MahjongBot()
