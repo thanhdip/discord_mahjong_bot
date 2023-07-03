@@ -173,18 +173,20 @@ class Mahjong(commands.Cog):
             self.mahjong_drawer = MahjongDrawer()
 
         user = ctx.author.display_name
-        if user in self.mahjong_drawer.DRAWN_USERS and force.lower() != "force" and members == None:
+        if (user in self.mahjong_drawer.DRAWN_USERS) and (force.lower() != "force") and (members):
             await ctx.send(
                 f"You've already drawn, {user}. Type it in again with force or tag yourself if you want to draw."
             )
-        elif members != None and user not in self.mahjong_drawer.DRAWN_USERS:
+            return
+        elif (members != None) and (user not in self.mahjong_drawer.DRAWN_USERS):
             cur_tile = self.mahjong_drawer.reveal_next(user)
             draw_msg = f"{user} drew: {cur_tile}\n"
 
         if members:
             for member in members[:3]:
-                cur_tile = self.mahjong_drawer.reveal_next(member.name)
-                draw_msg += f"{member.name} drew: {cur_tile}\n"
+                if member.name not in self.mahjong_drawer.DRAWN_USERS:
+                    cur_tile = self.mahjong_drawer.reveal_next(member.name)
+                    draw_msg += f"{member.name} drew: {cur_tile}\n"
 
         drawn_tiles = self.mahjong_drawer.reveal_tiles()
         draw_msg += f"""
