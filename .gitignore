@@ -166,3 +166,4 @@ notes.txt
 *.log
 
 temp/
+groups.json

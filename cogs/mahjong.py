@@ -2,8 +2,8 @@ import re
 import json
 import discord
 from dataclasses import dataclass
-
-from os.path import join, dirname
+from pprint import pformat
+from os.path import join, dirname, exists
 from typing import Optional
 from random import sample
 from discord.ext import commands
@@ -28,13 +28,12 @@ class MahjongDrawer:
 
     def new_set(self) -> None:
         self.reveal_tile_index = 0
+        self.DRAWN_USERS = set()
         self.wind_set = sample(self.WINDS.keys(), 4)
         self.reveal_winds = [self.WINDS[key] for key in self.wind_set]
 
     def reveal_next(self, user: str) -> str:
         self.DRAWN_USERS.add(user)
-        if self.all_revealed():
-            return None
         current_tile = self.last_revealed_tile()
         self.reveal_tile_index += 1
         return current_tile
@@ -43,8 +42,8 @@ class MahjongDrawer:
         cur_tile = self.reveal_tile_index
         return self.reveal_winds[cur_tile] if cur_tile >= 0 else self.TILE_BACK
 
-    def all_revealed(self):
-        return self.num_reveal_tiles >= 3
+    def all_revealed(self) -> bool:
+        return self.reveal_tile_index >= 3
 
     @property
     def num_reveal_tiles(self) -> int:
@@ -136,40 +135,78 @@ class MahjongScore:
 
 class Mahjong(commands.Cog):
     mahjong_drawer: MahjongDrawer = None
+    groups_filename = "groups.json"
+    groups_base_data = {}
 
     def __init__(self, bot):
         self.bot = bot
+        if not exists(self.groups_filename):
+            with open(self.groups_filename, "w") as f:
+                json.dump(self.groups_base_data, f)
 
-    @commands.command()
-    async def test(self, ctx: commands.Context, *args):
-        if ctx.author.name == "qvnsq":
-            self.mahjong_drawer = MahjongDrawer()
-            await ctx.send(self.mahjong_drawer.current_revealed_tiles())
+        with open(self.groups_filename, "r") as f:
+            self.groups_data: dict = json.load(f)
 
-    @commands.command()
-    async def winds(
-        self,
-        ctx: commands.Context,
-        members: commands.Greedy[discord.Member] = None,
-        *,
-        force: str = "",
-    ) -> None:
-        if not self.mahjong_drawer or force.lower() == "force" or self.mahjong_drawer.all_revealed():
+    @commands.group(invoke_without_command=True)
+    async def winds(self, ctx: commands.Context, group_name: str = None) -> None:
+        if group_name not in self.groups_data.keys():
+            await ctx.send(
+                f"Group or command: '{group_name}', not found. Enter a previous saved group name or a command, list, save, or get."
+            )
+            return
+
+        if not self.mahjong_drawer or self.mahjong_drawer.all_revealed():
             self.mahjong_drawer = MahjongDrawer()
 
         draw_msg = ""
-        if members:
-            for member in members[:4]:
-                cur_tile = self.mahjong_drawer.reveal_next(member.name)
-                draw_msg += f"{member.name} drew: {cur_tile}\n"
-        draw_msg += "\n"
+        user_list = self.groups_data[group_name]
+        draw_list = list(dict.fromkeys(user_list))
+        no_draw_list = self.mahjong_drawer.DRAWN_USERS
+        for user in draw_list:
+            if user in no_draw_list:
+                draw_msg += f"{user} has already drawn\n"
+                continue
+            cur_tile = self.mahjong_drawer.reveal_next(user)
+            if cur_tile:
+                draw_msg += f"{user} drew: {cur_tile}\n"
+            else:
+                break
 
         drawn_tiles = self.mahjong_drawer.current_revealed_tiles()
-        msg = f"""{draw_msg}Tiles:
+        msg = f"""{draw_msg}
+Tiles:
 
         {drawn_tiles}
         """
         await ctx.send(msg)
+
+    @winds.command()
+    async def save(self, ctx: commands.Context, group_name: str = None, *args):
+        if not args:
+            await ctx.send(f"Please give a list of usernames for your group: {group_name}")
+            return
+
+        name_list = [str(arg) for arg in args]
+        name_list_msg = pformat(name_list)
+        self.groups_data[group_name] = name_list[:4]
+
+        with open(self.groups_filename, "w") as f:
+            json.dump(self.groups_data, f)
+
+        await ctx.send(f"Added {name_list_msg} to group: {group_name}")
+
+    @winds.command()
+    async def list(self, ctx: commands.Context):
+        msg = pformat(self.groups_data)
+        await ctx.send(f"```\n{msg}\n```")
+
+    @winds.command()
+    async def get(self, ctx: commands.Context, group_name: str = None):
+        if group_name:
+            msg = pformat(self.groups_data[group_name])
+        else:
+            msg = "None"
+        await ctx.send(f"```\n{msg}\n```")
 
     @commands.command()
     async def draw(
