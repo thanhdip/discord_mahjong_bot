@@ -16,37 +16,40 @@ logger = getLogger(__name__)
 class MahjongDrawer:
     WINDS: dict[str, str] = {"TON": "東", "NAN": "南", "SHAA": "西", "PEI": "北"}
     TILE_BACK: str = " █ "
-    DRAWN_USERS: list[str] = []
+    DRAWN_USERS: set[str] = set()
+    reveal_tile_index: int = 0
 
     def __init__(self) -> None:
-        self.DRAWN_USERS = []
         self.new_set()
 
-    def reveal_tiles(self, num_reveal: Optional[int] = None) -> str:
-        if not num_reveal:
-            num_reveal = self.num_reveal_tiles
-        num_backs = 4 - num_reveal
-        return " ".join(self.reveal_winds[:num_reveal]) + self.TILE_BACK * num_backs
+    def current_revealed_tiles(self) -> str:
+        num_backs = 4 - self.num_reveal_tiles
+        return " ".join(self.reveal_winds[: self.num_reveal_tiles]) + self.TILE_BACK * num_backs
 
     def new_set(self) -> None:
-        self.num_reveal_tiles = 0
+        self.reveal_tile_index = 0
         self.wind_set = sample(self.WINDS.keys(), 4)
         self.reveal_winds = [self.WINDS[key] for key in self.wind_set]
 
     def reveal_next(self, user: str) -> str:
-        self.DRAWN_USERS.append(user)
+        self.DRAWN_USERS.add(user)
         if self.all_revealed():
-            self.new_set()
-        self.num_reveal_tiles += 1
-        self.reveal_tiles()
-        return self.last_revealed_tile()
+            return None
+        current_tile = self.last_revealed_tile()
+        self.reveal_tile_index += 1
+        return current_tile
 
     def last_revealed_tile(self) -> str:
-        cur_tile = self.num_reveal_tiles - 1
+        cur_tile = self.reveal_tile_index
         return self.reveal_winds[cur_tile] if cur_tile >= 0 else self.TILE_BACK
 
     def all_revealed(self):
         return self.num_reveal_tiles >= 3
+
+    @property
+    def num_reveal_tiles(self) -> int:
+        reveal_tile = [0, 1, 2, 4, 4]
+        return reveal_tile[self.reveal_tile_index]
 
 
 @dataclass
@@ -138,6 +141,12 @@ class Mahjong(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    async def test(self, ctx: commands.Context, *args):
+        if ctx.author.name == "qvnsq":
+            self.mahjong_drawer = MahjongDrawer()
+            await ctx.send(self.mahjong_drawer.current_revealed_tiles())
+
+    @commands.command()
     async def winds(
         self,
         ctx: commands.Context,
@@ -155,7 +164,7 @@ class Mahjong(commands.Cog):
                 draw_msg += f"{member.name} drew: {cur_tile}\n"
         draw_msg += "\n"
 
-        drawn_tiles = self.mahjong_drawer.reveal_tiles()
+        drawn_tiles = self.mahjong_drawer.current_revealed_tiles()
         msg = f"""{draw_msg}Tiles:
 
         {drawn_tiles}
@@ -167,28 +176,40 @@ class Mahjong(commands.Cog):
         self,
         ctx: commands.Context,
         members: commands.Greedy[discord.Member] = None,
+        *,
         force: str = "",
     ) -> None:
         if not self.mahjong_drawer or self.mahjong_drawer.all_revealed():
             self.mahjong_drawer = MahjongDrawer()
 
-        user = ctx.author.display_name
-        if (user in self.mahjong_drawer.DRAWN_USERS) and (force.lower() != "force") and (members):
-            await ctx.send(
-                f"You've already drawn, {user}. Type it in again with force or tag yourself if you want to draw."
-            )
-            return
-        elif (members != None) and (user not in self.mahjong_drawer.DRAWN_USERS):
-            cur_tile = self.mahjong_drawer.reveal_next(user)
-            draw_msg = f"{user} drew: {cur_tile}\n"
+        force = force.lower()
+        draw_msg = ""
+        cmd_user = ctx.author.display_name
 
         if members:
-            for member in members[:3]:
-                if member.name not in self.mahjong_drawer.DRAWN_USERS:
-                    cur_tile = self.mahjong_drawer.reveal_next(member.name)
-                    draw_msg += f"{member.name} drew: {cur_tile}\n"
+            given_list = [member.name for member in members]
+            draw_list = list(dict.fromkeys(given_list))
+            no_draw_list = self.mahjong_drawer.DRAWN_USERS
+            for user in draw_list:
+                if user in no_draw_list:
+                    draw_msg += f"{user} has already drawn\n"
+                    continue
+                cur_tile = self.mahjong_drawer.reveal_next(user)
+                if cur_tile:
+                    draw_msg += f"{user} drew: {cur_tile}\n"
+                else:
+                    break
+        else:
+            if cmd_user in self.mahjong_drawer.DRAWN_USERS and force != "force":
+                await ctx.send(
+                    f"You've already drawn, {cmd_user}. Type it in again with force or tag yourself if you want to draw."
+                )
+                return
+            else:
+                if cur_tile := self.mahjong_drawer.reveal_next(cmd_user):
+                    draw_msg += f"{cmd_user} drew: {cur_tile}\n"
 
-        drawn_tiles = self.mahjong_drawer.reveal_tiles()
+        drawn_tiles = self.mahjong_drawer.current_revealed_tiles()
         draw_msg += f"""
 
         Tiles:
